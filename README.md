@@ -20,7 +20,7 @@ go run simple_slow_http_server
 or you can use docker image from docker hub
 
 ```shell
-docker run -p 8080:8080 simple_slow_http_server
+docker run -p 8080:8080 gostkov/simple_slow_http_server
 ```
 
 ### Описание
