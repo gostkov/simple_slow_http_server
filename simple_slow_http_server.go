@@ -10,7 +10,9 @@ import (
 )
 
 type Service struct {
-	logger *zap.SugaredLogger
+	logger            *zap.SugaredLogger
+	basicAuthLogin    string
+	basicAuthPassword string
 }
 
 func (s *Service) slowRequest(w http.ResponseWriter, r *http.Request) {
@@ -46,11 +48,34 @@ func (s *Service) errorRequest(w http.ResponseWriter, r *http.Request) {
 	return
 }
 
+func (s *Service) basicAuth(next http.HandlerFunc) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if s.basicAuthPassword == "" || s.basicAuthLogin == "" {
+			s.logger.Debugln("basic auth is not enabled")
+			next.ServeHTTP(w, r)
+			return
+		}
+		username, password, ok := r.BasicAuth()
+		if ok {
+			if username == s.basicAuthLogin && password == s.basicAuthPassword {
+				s.logger.Debugln("basic auth has been passed")
+				next.ServeHTTP(w, r)
+				return
+			}
+		}
+		s.logger.Debugln("basic auth has not been passed")
+		w.Header().Set("WWW-Authenticate", `Basic realm="restricted", charset="UTF-8"`)
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+}
+
 func main() {
 	zapLogger, err := zap.NewProduction()
 	if err != nil {
 		log.Fatal(err)
 	}
+
 	logger := zapLogger.Sugar()
 	httpIp := os.Getenv("IP")
 	if httpIp == "" {
@@ -62,11 +87,19 @@ func main() {
 		logger.Warnln("Use default port 8080")
 		httpPort = "8080"
 	}
-	service := &Service{logger: logger}
+	authBasicLogin := os.Getenv("BASIC_AUTH_LOGIN")
+	authBasicPassword := os.Getenv("BASIC_AUTH_PASSWORD")
+
+	service := &Service{
+		logger:            logger,
+		basicAuthLogin:    authBasicLogin,
+		basicAuthPassword: authBasicPassword,
+	}
 	mux := http.NewServeMux()
-	mux.HandleFunc("/slow/", service.slowRequest)
-	mux.HandleFunc("/fast/", service.fastRequest)
-	mux.HandleFunc("/error/", service.errorRequest)
+
+	mux.HandleFunc("/slow/", service.basicAuth(service.slowRequest))
+	mux.HandleFunc("/fast/", service.basicAuth(service.fastRequest))
+	mux.HandleFunc("/error/", service.basicAuth(service.errorRequest))
 	logger.Infoln("Starting http service")
 	err = http.ListenAndServe(httpIp+":"+httpPort, mux)
 	if err != nil {
