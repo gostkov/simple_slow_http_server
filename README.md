@@ -10,6 +10,8 @@ You can use 3 methods (slow, fast, error):
 
 ### Usage
 
+You can pass environment variables `BASIC_AUTH_LOGIN` and `BASIC_AUTH_PASSWORD` for enable basic_auth. By default, basic auth is disabled.
+
 You can build local
 ```shell
 git clone https://github.com/gostkov/simple_slow_http_server
@@ -31,3 +33,20 @@ docker run -p 8080:8080 gostkov/simple_slow_http_server
 - http://127.0.0.1:8080/fast/ данный метод дает быстрый ответ
 - http://127.0.0.1:8080/error/code=500 данный метод возвращает нужную вам ошибку, через параметр `code`
 
+А также включить basic авторизацию
+
+### Использование
+Если вы хотите использовать basic авторизацию, то необходимо задать две переменные: `BASIC_AUTH_LOGIN` and `BASIC_AUTH_PASSWORD`. По-умолчанию выключена.
+
+Запустить можно скачав с github'а
+```shell
+git clone https://github.com/gostkov/simple_slow_http_server
+cd simple_slow_http_server
+go run simple_slow_http_server
+```
+
+Или используя образ из docker hub
+
+```shell
+docker run -p 8080:8080 gostkov/simple_slow_http_server
+```
